@@ -41,8 +41,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
             HandshakeSuccess(
               PeerInfo(
                 initialStatus,
-                totalDifficulty,
-                latestCheckpointNumber,
+                chainWeight,
                 forkAccepted,
                 currentMaxBlockNumber,
                 bestBlockHash
@@ -50,8 +49,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
             )
           ) =>
         initialStatus shouldBe remoteStatus
-        totalDifficulty shouldBe remoteStatus.totalDifficulty
-        latestCheckpointNumber shouldBe remoteStatus.latestCheckpointNumber
+        chainWeight shouldBe remoteStatus.chainWeight
         bestBlockHash shouldBe remoteStatus.bestHash
         currentMaxBlockNumber shouldBe 0
         forkAccepted shouldBe true
@@ -69,12 +67,12 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
         bc.copy(ecip1097BlockNumber = firstBlock.number + 1)
     })
 
-    val newTotalDifficulty = genesisBlock.header.difficulty + firstBlock.header.difficulty
+    val newChainWeight = ChainWeight.zero.increase(genesisBlock.header).increase(firstBlock.header)
 
-    blockchain.save(firstBlock, Nil, newTotalDifficulty, saveAsBestBlock = true)
+    blockchain.save(firstBlock, Nil, newChainWeight, saveAsBestBlock = true)
 
     val newLocalStatus =
-      localStatus.copy(totalDifficulty = newTotalDifficulty, bestHash = firstBlock.header.hash)
+      localStatus.copy(chainWeight = newChainWeight, bestHash = firstBlock.header.hash)
 
     handshaker.nextMessage.map(_.messageToSend) shouldBe Right(localHello: HelloEnc)
     val handshakerAfterHelloOpt = handshaker.applyMessage(remoteHello)
@@ -92,16 +90,15 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
         bc.copy(ecip1097BlockNumber = firstBlock.number)
     })
 
-    val newTotalDifficulty = genesisBlock.header.difficulty + firstBlock.header.difficulty
+    val newChainWeight = ChainWeight.zero.increase(genesisBlock.header).increase(firstBlock.header)
 
-    blockchain.save(firstBlock, Nil, newTotalDifficulty, saveAsBestBlock = true)
+    blockchain.save(firstBlock, Nil, newChainWeight, saveAsBestBlock = true)
     blockchain.saveBestKnownBlocks(firstBlock.number, Some(42)) // doesn't matter what number this is
 
     val newLocalStatus =
-      localStatus.as64.copy(
-        totalDifficulty = newTotalDifficulty,
-        bestHash = firstBlock.header.hash,
-        latestCheckpointNumber = 42
+      localStatus.copy(
+        chainWeight = newChainWeight,
+        bestHash = firstBlock.header.hash
       )
 
     handshaker.nextMessage.map(_.messageToSend) shouldBe Right(localHello: HelloEnc)
@@ -128,8 +125,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
             HandshakeSuccess(
               PeerInfo(
                 initialStatus,
-                totalDifficulty,
-                latestCheckpointNumber,
+                chainWeight,
                 forkAccepted,
                 currentMaxBlockNumber,
                 bestBlockHash
@@ -137,8 +133,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
             )
           ) =>
         initialStatus shouldBe remoteStatus
-        totalDifficulty shouldBe remoteStatus.totalDifficulty
-        latestCheckpointNumber shouldBe remoteStatus.latestCheckpointNumber
+        chainWeight shouldBe remoteStatus.chainWeight
         bestBlockHash shouldBe remoteStatus.bestHash
         currentMaxBlockNumber shouldBe 0
         forkAccepted shouldBe true
@@ -164,8 +159,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
             HandshakeSuccess(
               PeerInfo(
                 initialStatus,
-                totalDifficulty,
-                latestCheckpointNumber,
+                chainWeight,
                 forkAccepted,
                 currentMaxBlockNumber,
                 bestBlockHash
@@ -173,8 +167,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
             )
           ) =>
         initialStatus shouldBe remoteStatus
-        totalDifficulty shouldBe remoteStatus.totalDifficulty
-        latestCheckpointNumber shouldBe remoteStatus.latestCheckpointNumber
+        chainWeight shouldBe remoteStatus.chainWeight
         bestBlockHash shouldBe remoteStatus.bestHash
         currentMaxBlockNumber shouldBe 0
         forkAccepted shouldBe false
@@ -267,9 +260,11 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
       Fixtures.Blocks.Genesis.body
     )
 
+    val genesisWeight = ChainWeight.zero.increase(genesisBlock.header)
+
     val forkBlockHeader = Fixtures.Blocks.DaoForkBlock.header
 
-    blockchain.save(genesisBlock, Nil, genesisBlock.header.difficulty, saveAsBestBlock = true)
+    blockchain.save(genesisBlock, Nil, genesisWeight, saveAsBestBlock = true)
 
     val nodeStatus = NodeStatus(
       key = generateKeyPair(secureRandom),
@@ -312,7 +307,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
     val localStatus = Status(
       protocolVersion = Versions.PV63,
       networkId = Config.Network.peer.networkId,
-      totalDifficulty = genesisBlock.header.difficulty,
+      chainWeight = ChainWeight.zero.increase(genesisBlock.header),
       bestHash = genesisBlock.header.hash,
       genesisHash = genesisBlock.header.hash
     ).as63
@@ -341,7 +336,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
       Status(
         protocolVersion = Versions.PV63,
         networkId = Config.Network.peer.networkId,
-        totalDifficulty = 0,
+        chainWeight = ChainWeight.zero,
         bestHash = genesisBlock.header.hash,
         genesisHash = genesisBlock.header.hash
       ).as63

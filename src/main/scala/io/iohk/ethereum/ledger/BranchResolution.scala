@@ -37,52 +37,32 @@ class BranchResolution(blockchain: Blockchain) {
     val oldBlocks = oldBlocksWithCommonPrefix.drop(commonPrefixLength)
     val newHeaders = headersList.drop(commonPrefixLength)
 
-    if (compareByCheckpoints(newHeaders, oldBlocks.map(_.header)))
-      NewBetterBranch(oldBlocks)
-    else
-      NoChainSwitch
-  }
+    val maybeParentWeight =
+      oldBlocks.headOption
+        .map(_.header.parentHash)
+        .orElse(newHeaders.headOption.map(_.parentHash))
+        .flatMap(blockchain.getChainWeightByHash)
 
-  /**
-    * @return true if newBranch is better than oldBranch
-    */
-  private def compareByCheckpoints(newBranch: Seq[BlockHeader], oldBranch: Seq[BlockHeader]): Boolean =
-    (branchLatestCheckpoint(newBranch), branchLatestCheckpoint(oldBranch)) match {
-      case (Some(newCheckpoint), Some(oldCheckpoint)) =>
-        if (newCheckpoint.number == oldCheckpoint.number)
-          compareByDifficulty(newBranch, oldBranch)
+    maybeParentWeight match {
+      case Some(parentWeight) =>
+        val oldWeight = oldBlocks.foldLeft(parentWeight)((w, b) => w.increase(b.header))
+        val newWeight = newHeaders.foldLeft(parentWeight)((w, h) => w.increase(h))
+
+        if (newWeight > oldWeight)
+          NewBetterBranch(oldBlocks)
         else
-          newCheckpoint.number > oldCheckpoint.number
+          NoChainSwitch
 
-      case (Some(_), None) =>
-        true
-
-      case (None, Some(_)) =>
-        false
-
-      case (None, None) =>
-        compareByDifficulty(newBranch, oldBranch)
+      case None =>
+        // TODO: should we log if parentWeight not found?
+        NoChainSwitch
     }
-
-  /**
-    * @return true if newBranch is better than oldBranch
-    */
-  private def compareByDifficulty(newBranch: Seq[BlockHeader], oldBranch: Seq[BlockHeader]): Boolean = {
-    val newDifficulty = newBranch.map(_.difficulty).sum
-    val oldDifficulty = oldBranch.map(_.difficulty).sum
-    newDifficulty > oldDifficulty
   }
 
   private def getTopBlocksFromNumber(from: BigInt): List[Block] =
     (from to blockchain.getBestBlockNumber())
       .flatMap(blockchain.getBlockByNumber)
       .toList
-
-  private def branchLatestCheckpoint(headers: Seq[BlockHeader]): Option[BlockHeader] =
-    headers.filter(_.hasCheckpoint) match {
-      case Seq() => None
-      case checkpoints => Some(checkpoints.maxBy(_.number))
-    }
 }
 
 sealed trait BranchResolutionResult

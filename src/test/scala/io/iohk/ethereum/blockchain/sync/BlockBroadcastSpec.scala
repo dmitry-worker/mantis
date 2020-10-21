@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import akka.actor.ActorSystem
 import akka.testkit.TestProbe
 import io.iohk.ethereum.Fixtures
-import io.iohk.ethereum.domain.{Block, BlockBody, BlockHeader}
+import io.iohk.ethereum.domain.{Block, BlockBody, BlockHeader, ChainWeight}
 import io.iohk.ethereum.network.{EtcPeerManagerActor, Peer}
 import io.iohk.ethereum.network.EtcPeerManagerActor.PeerInfo
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.{NewBlock, Status}
@@ -19,12 +19,13 @@ import org.scalatest.matchers.should.Matchers
 
 class BlockBroadcastSpec extends AnyFlatSpec with Matchers {
 
-  it should "send a new block when it is not known by the peer (known by comparing total difficulties)" in new TestSetup {
+  it should "send a new block when it is not known by the peer (known by comparing chain weights)" in new TestSetup {
     //given
     //Block that should be sent as it's total difficulty is higher than known by peer
     val blockHeader: BlockHeader = baseBlockHeader.copy(number = initialPeerInfo.maxBlockNumber - 3)
     val newBlockNewHashes = NewBlockHashes(Seq(PV62.BlockHash(blockHeader.hash, blockHeader.number)))
-    val newBlock = NewBlock(Block(blockHeader, BlockBody(Nil, Nil)), initialPeerInfo.totalDifficulty + 2)
+    val newBlock =
+      NewBlock(Block(blockHeader, BlockBody(Nil, Nil)), initialPeerInfo.chainWeight.increaseTotalDifficulty(2))
 
     //when
     blockBroadcast.broadcastBlock(newBlock, Map(peer -> initialPeerInfo))
@@ -39,7 +40,8 @@ class BlockBroadcastSpec extends AnyFlatSpec with Matchers {
     //given
     //Block that shouldn't be sent as it's number and total difficulty is lower than known by peer
     val blockHeader: BlockHeader = baseBlockHeader.copy(number = initialPeerInfo.maxBlockNumber - 2)
-    val newBlock = NewBlock(Block(blockHeader, BlockBody(Nil, Nil)), initialPeerInfo.totalDifficulty - 2)
+    val newBlock =
+      NewBlock(Block(blockHeader, BlockBody(Nil, Nil)), initialPeerInfo.chainWeight.increaseTotalDifficulty(-2))
 
     //when
     blockBroadcast.broadcastBlock(newBlock, Map(peer -> initialPeerInfo))
@@ -52,7 +54,8 @@ class BlockBroadcastSpec extends AnyFlatSpec with Matchers {
     //given
     val blockHeader: BlockHeader = baseBlockHeader.copy(number = initialPeerInfo.maxBlockNumber + 4)
     val newBlockNewHashes = NewBlockHashes(Seq(PV62.BlockHash(blockHeader.hash, blockHeader.number)))
-    val newBlock = NewBlock(Block(blockHeader, BlockBody(Nil, Nil)), initialPeerInfo.totalDifficulty - 2)
+    val newBlock =
+      NewBlock(Block(blockHeader, BlockBody(Nil, Nil)), initialPeerInfo.chainWeight.increaseTotalDifficulty(-2))
 
     //when
     blockBroadcast.broadcastBlock(newBlock, Map(peer -> initialPeerInfo))
@@ -67,7 +70,8 @@ class BlockBroadcastSpec extends AnyFlatSpec with Matchers {
     //given
     //Block should already be known by the peer due to max block known
     val blockHeader: BlockHeader = baseBlockHeader.copy(number = initialPeerInfo.maxBlockNumber - 2)
-    val newBlock = NewBlock(Block(blockHeader, BlockBody(Nil, Nil)), initialPeerInfo.totalDifficulty - 2)
+    val newBlock =
+      NewBlock(Block(blockHeader, BlockBody(Nil, Nil)), initialPeerInfo.chainWeight.increaseTotalDifficulty(-2))
 
     //when
     blockBroadcast.broadcastBlock(newBlock, Map(peer -> initialPeerInfo))
@@ -80,7 +84,8 @@ class BlockBroadcastSpec extends AnyFlatSpec with Matchers {
     //given
     val firstHeader: BlockHeader = baseBlockHeader.copy(number = initialPeerInfo.maxBlockNumber + 4)
     val firstBlockNewHashes = NewBlockHashes(Seq(PV62.BlockHash(firstHeader.hash, firstHeader.number)))
-    val firstBlock = NewBlock(Block(firstHeader, BlockBody(Nil, Nil)), initialPeerInfo.totalDifficulty - 2)
+    val firstBlock =
+      NewBlock(Block(firstHeader, BlockBody(Nil, Nil)), initialPeerInfo.chainWeight.increaseTotalDifficulty(-2))
 
     val peer2Probe = TestProbe()
     val peer2 = Peer(new InetSocketAddress("127.0.0.1", 0), peer2Probe.ref, false)
@@ -117,7 +122,7 @@ class BlockBroadcastSpec extends AnyFlatSpec with Matchers {
     override val blockBroadcast = new BlockBroadcast(etcPeerManagerProbe.ref, updatedConfig)
 
     val blockHeader: BlockHeader = baseBlockHeader.copy(number = initialPeerInfo.maxBlockNumber + 1)
-    val newBlock = NewBlock(Block(blockHeader, BlockBody(Nil, Nil)), initialPeerInfo.totalDifficulty + 1)
+    val newBlock = NewBlock(Block(blockHeader, BlockBody(Nil, Nil)), initialPeerInfo.chainWeight.increase(blockHeader))
 
     blockBroadcast.broadcastBlock(newBlock, Map(peer -> initialPeerInfo))
 
@@ -139,14 +144,13 @@ class BlockBroadcastSpec extends AnyFlatSpec with Matchers {
     val peerStatus = Status(
       protocolVersion = Versions.PV63,
       networkId = 1,
-      totalDifficulty = BigInt(10000),
+      chainWeight = ChainWeight(10, 10000),
       bestHash = Fixtures.Blocks.Block3125369.header.hash,
       genesisHash = Fixtures.Blocks.Genesis.header.hash
     )
     val initialPeerInfo = PeerInfo(
       remoteStatus = peerStatus,
-      totalDifficulty = peerStatus.totalDifficulty,
-      latestCheckpointNumber = peerStatus.latestCheckpointNumber,
+      chainWeight = peerStatus.chainWeight,
       forkAccepted = false,
       maxBlockNumber = Fixtures.Blocks.Block3125369.header.number,
       bestBlockHash = peerStatus.bestHash

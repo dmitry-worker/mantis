@@ -13,7 +13,7 @@ import io.iohk.ethereum.network.handshaker.Handshaker.HandshakeResult
 import io.iohk.ethereum.network.p2p.{Message, MessageSerializable}
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.{NewBlock, Status}
 import io.iohk.ethereum.network.p2p.messages.PV62.{BlockHeaders, GetBlockHeaders, NewBlockHashes}
-import io.iohk.ethereum.network.p2p.messages.WireProtocol.Disconnect
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.{Capability, Disconnect}
 import io.iohk.ethereum.utils.ByteStringUtils
 
 /**
@@ -233,6 +233,7 @@ object EtcPeerManagerActor {
 
   case class PeerInfo(
       remoteStatus: Status, // Updated only after handshaking
+      capabilities: Seq[Capability],
       chainWeight: ChainWeight,
       forkAccepted: Boolean,
       maxBlockNumber: BigInt,
@@ -249,6 +250,7 @@ object EtcPeerManagerActor {
 
     override def toString: String =
       s"PeerInfo {" +
+        s" capabilites: $capabilities," +
         s" chainWeight: $chainWeight," +
         s" forkAccepted: $forkAccepted," +
         s" maxBlockNumber: $maxBlockNumber," +
@@ -258,9 +260,10 @@ object EtcPeerManagerActor {
   }
 
   object PeerInfo {
-    def apply(remoteStatus: Status, forkAccepted: Boolean): PeerInfo = {
+    def apply(remoteStatus: Status, capabilities: Seq[Capability], forkAccepted: Boolean): PeerInfo = {
       PeerInfo(
         remoteStatus,
+        capabilities,
         remoteStatus.chainWeight,
         forkAccepted,
         0,
@@ -268,9 +271,11 @@ object EtcPeerManagerActor {
       )
     }
 
-    def withForkAccepted(remoteStatus: Status): PeerInfo = PeerInfo(remoteStatus, forkAccepted = true)
+    def withForkAccepted(remoteStatus: Status, capabilities: Seq[Capability]): PeerInfo =
+      PeerInfo(remoteStatus, capabilities, forkAccepted = true)
 
-    def withNotForkAccepted(remoteStatus: Status): PeerInfo = PeerInfo(remoteStatus, forkAccepted = false)
+    def withNotForkAccepted(remoteStatus: Status, capabilities: Seq[Capability]): PeerInfo =
+      PeerInfo(remoteStatus, capabilities, forkAccepted = false)
   }
 
   private case class PeerWithInfo(peer: Peer, peerInfo: PeerInfo)

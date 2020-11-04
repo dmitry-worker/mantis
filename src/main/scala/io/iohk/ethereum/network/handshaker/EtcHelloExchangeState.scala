@@ -5,7 +5,7 @@ import io.iohk.ethereum.network.EtcPeerManagerActor.PeerInfo
 import io.iohk.ethereum.network.handshaker.Handshaker.NextMessage
 import io.iohk.ethereum.network.p2p.Message
 import io.iohk.ethereum.network.p2p.messages.Versions
-import io.iohk.ethereum.network.p2p.messages.WireProtocol.{Capability, Disconnect, Hello}
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.{Disconnect, Ecip1097Capability, Eth63Capability, Hello}
 import io.iohk.ethereum.utils.{Config, Logger, ServerStatus}
 
 case class EtcHelloExchangeState(handshakerConfiguration: EtcHandshakerConfiguration)
@@ -24,8 +24,8 @@ case class EtcHelloExchangeState(handshakerConfiguration: EtcHandshakerConfigura
 
   override def applyResponseMessage: PartialFunction[Message, HandshakerState[PeerInfo]] = { case hello: Hello =>
     log.debug("Protocol handshake finished with peer ({})", hello)
-    if (hello.capabilities.contains(Capability("eth", Versions.PV63.toByte)))
-      EtcNodeStatusExchangeState(handshakerConfiguration)
+    if (hello.capabilities.contains(Eth63Capability))
+      EtcNodeStatusExchangeState(handshakerConfiguration, hello.capabilities)
     else {
       log.debug("Connected peer does not support eth {} protocol. Disconnecting.", Versions.PV63.toByte)
       DisconnectedState(Disconnect.Reasons.IncompatibleP2pProtocolVersion)
@@ -47,7 +47,8 @@ case class EtcHelloExchangeState(handshakerConfiguration: EtcHandshakerConfigura
     Hello(
       p2pVersion = EtcHelloExchangeState.P2pVersion,
       clientId = Config.clientId,
-      capabilities = Seq(Capability("eth", Versions.PV63.toByte)),
+      //TODO: should this be configurable?
+      capabilities = Seq(Eth63Capability, Ecip1097Capability),
       listenPort = listenPort,
       nodeId = ByteString(nodeStatus.nodeId)
     )

@@ -28,6 +28,9 @@ object WireProtocol {
 
   case class Capability(name: String, version: Byte)
 
+  val Eth63Capability: Capability = Capability("eth", Versions.PV63.toByte)
+  val Ecip1097Capability: Capability = Capability("ECIP-1097", 1)
+
   object Hello {
 
     val code = 0x00

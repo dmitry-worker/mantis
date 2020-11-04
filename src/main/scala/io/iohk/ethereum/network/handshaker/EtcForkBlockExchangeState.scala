@@ -6,11 +6,12 @@ import io.iohk.ethereum.network.handshaker.Handshaker.NextMessage
 import io.iohk.ethereum.network.p2p.{Message, MessageSerializable}
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.Status
 import io.iohk.ethereum.network.p2p.messages.PV62.{BlockHeaders, GetBlockHeaders}
-import io.iohk.ethereum.network.p2p.messages.WireProtocol.Disconnect
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.{Capability, Disconnect}
 import io.iohk.ethereum.utils.Logger
 
 case class EtcForkBlockExchangeState(
     handshakerConfiguration: EtcHandshakerConfiguration,
+    capabilities: Seq[Capability],
     forkResolver: ForkResolver,
     remoteStatus: Status
 ) extends InProgressState[PeerInfo]
@@ -36,7 +37,7 @@ case class EtcForkBlockExchangeState(
         if (forkResolver.isAccepted(fork)) {
           log.debug("Fork is accepted")
           //setting maxBlockNumber to 0, as we do not know best block number yet
-          ConnectedState(PeerInfo.withForkAccepted(remoteStatus))
+          ConnectedState(PeerInfo.withForkAccepted(remoteStatus, capabilities))
         } else {
           log.debug("Fork is not accepted")
           DisconnectedState[PeerInfo](Disconnect.Reasons.UselessPeer)
@@ -44,7 +45,7 @@ case class EtcForkBlockExchangeState(
 
       case None =>
         log.debug("Peer did not respond with fork block header")
-        ConnectedState(PeerInfo.withNotForkAccepted(remoteStatus))
+        ConnectedState(PeerInfo.withNotForkAccepted(remoteStatus, capabilities))
     }
 
   }

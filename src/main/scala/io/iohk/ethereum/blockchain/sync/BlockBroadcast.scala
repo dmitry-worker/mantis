@@ -6,6 +6,7 @@ import io.iohk.ethereum.network.EtcPeerManagerActor.PeerInfo
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.NewBlock
 import io.iohk.ethereum.network.p2p.messages.PV62
 import io.iohk.ethereum.network.p2p.messages.PV62.BlockHash
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.Ecip1097Capability
 import io.iohk.ethereum.utils.Config.SyncConfig
 
 import scala.util.Random
@@ -22,15 +23,15 @@ class BlockBroadcast(val etcPeerManager: ActorRef, syncConfig: SyncConfig) {
     * @param handshakedPeers, to which the blocks will be broadcasted to
     */
   def broadcastBlock(newBlock: NewBlock, handshakedPeers: Map[Peer, PeerInfo]): Unit = {
-    val peersWithoutBlock = handshakedPeers.collect {
-      case (peer, peerInfo) if shouldSendNewBlock(newBlock, peerInfo) => peer
-    }.toSet
+    val peersWithoutBlock = handshakedPeers.filter { case (_, peerInfo) =>
+      shouldSendNewBlock(newBlock, peerInfo)
+    }
 
     broadcastNewBlock(newBlock, peersWithoutBlock)
 
     if (syncConfig.broadcastNewBlockHashes) {
       // NOTE: the usefulness of this message is debatable, especially in private networks
-      broadcastNewBlockHash(newBlock, peersWithoutBlock)
+      broadcastNewBlockHash(newBlock, peersWithoutBlock.keySet)
     }
   }
 
@@ -38,9 +39,11 @@ class BlockBroadcast(val etcPeerManager: ActorRef, syncConfig: SyncConfig) {
     newBlock.block.header.number > peerInfo.maxBlockNumber ||
       newBlock.chainWeight > peerInfo.chainWeight
 
-  private def broadcastNewBlock(newBlock: NewBlock, peers: Set[Peer]): Unit =
-    obtainRandomPeerSubset(peers).foreach { peer =>
-      etcPeerManager ! EtcPeerManagerActor.SendMessage(newBlock, peer.id)
+  private def broadcastNewBlock(newBlock: NewBlock, peers: Map[Peer, PeerInfo]): Unit =
+    obtainRandomPeerSubset(peers.keySet).foreach { peer =>
+      val ecip1097Capable = peers(peer).capabilities.contains(Ecip1097Capability)
+      val message = if (ecip1097Capable) newBlock.as64 else newBlock.as63
+      etcPeerManager ! EtcPeerManagerActor.SendMessage(message, peer.id)
     }
 
   private def broadcastNewBlockHash(newBlock: NewBlock, peers: Set[Peer]): Unit = peers.foreach { peer =>

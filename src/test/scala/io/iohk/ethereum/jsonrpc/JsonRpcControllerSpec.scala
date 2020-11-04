@@ -17,6 +17,7 @@ import io.iohk.ethereum.jsonrpc.server.ipc.JsonRpcIpcServer
 import io.iohk.ethereum.network.EtcPeerManagerActor.PeerInfo
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.Status
 import io.iohk.ethereum.network.p2p.messages.Versions
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.Eth63Capability
 import io.iohk.ethereum.{Fixtures, LongPatience, WithActorSystemShutDown}
 import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
@@ -127,6 +128,7 @@ class JsonRpcControllerSpec
     )
     val initialPeerInfo = PeerInfo(
       remoteStatus = peerStatus,
+      capabilities = Seq(Eth63Capability),
       chainWeight = peerStatus.chainWeight,
       forkAccepted = true,
       maxBlockNumber = Fixtures.Blocks.Block3125369.header.number,

@@ -15,6 +15,7 @@ import io.iohk.ethereum.ledger._
 import io.iohk.ethereum.network.EtcPeerManagerActor.PeerInfo
 import io.iohk.ethereum.network.handshaker.{ConnectedState, DisconnectedState, Handshaker, HandshakerState}
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.Status
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.Eth63Capability
 import io.iohk.ethereum.vm._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -136,6 +137,7 @@ object Mocks {
       ConnectedState(
         PeerInfo(
           initialStatus,
+          Seq(Eth63Capability),
           initialStatus.chainWeight,
           forkAccepted,
           currentMaxBlockNumber,

@@ -10,6 +10,7 @@ import io.iohk.ethereum.network.EtcPeerManagerActor.PeerInfo
 import io.iohk.ethereum.network.Peer
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.Status
 import io.iohk.ethereum.network.p2p.messages.Versions
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.Eth63Capability
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
@@ -75,6 +76,7 @@ class PeersClientSpec extends AnyFlatSpec with Matchers with ScalaCheckPropertyC
     def peerInfo(chkp: Int, td: Int, fork: Boolean = true): PeerInfo =
       PeerInfo(
         peerStatus,
+        capabilities = Seq(Eth63Capability),
         ChainWeight(chkp, td),
         forkAccepted = fork,
         maxBlockNumber = 42,

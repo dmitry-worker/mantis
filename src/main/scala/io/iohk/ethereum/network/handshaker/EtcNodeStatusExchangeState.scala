@@ -5,12 +5,14 @@ import io.iohk.ethereum.network.handshaker.Handshaker.NextMessage
 import io.iohk.ethereum.network.p2p.Message
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.Status
 import io.iohk.ethereum.network.p2p.messages.Versions
-import io.iohk.ethereum.network.p2p.messages.WireProtocol.Disconnect
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.{Capability, Disconnect, Ecip1097Capability}
 import io.iohk.ethereum.network.p2p.messages.WireProtocol.Disconnect.Reasons
 import io.iohk.ethereum.utils.Logger
 
-case class EtcNodeStatusExchangeState(handshakerConfiguration: EtcHandshakerConfiguration)
-    extends InProgressState[PeerInfo]
+case class EtcNodeStatusExchangeState(
+    handshakerConfiguration: EtcHandshakerConfiguration,
+    capabilities: Seq[Capability]
+) extends InProgressState[PeerInfo]
     with Logger {
 
   import handshakerConfiguration._
@@ -30,9 +32,9 @@ case class EtcNodeStatusExchangeState(handshakerConfiguration: EtcHandshakerConf
     if (validNetworkID && validGenesisHash) {
       forkResolverOpt match {
         case Some(forkResolver) =>
-          EtcForkBlockExchangeState(handshakerConfiguration, forkResolver, remoteStatus)
+          EtcForkBlockExchangeState(handshakerConfiguration, capabilities, forkResolver, remoteStatus)
         case None =>
-          ConnectedState(PeerInfo.withForkAccepted(remoteStatus))
+          ConnectedState(PeerInfo.withForkAccepted(remoteStatus, capabilities))
       }
     } else
       DisconnectedState(Reasons.DisconnectRequested)
@@ -61,7 +63,7 @@ case class EtcNodeStatusExchangeState(handshakerConfiguration: EtcHandshakerConf
       genesisHash = blockchain.genesisHeader.hash
     )
 
-    val adjustedStatus = if (bestBlockHeader.number < blockchainConfig.ecip1097BlockNumber) status.as63 else status.as64
+    val adjustedStatus = if (capabilities.contains(Ecip1097Capability)) status.as64 else status.as63
     log.debug(s"sending status $adjustedStatus")
     adjustedStatus
   }

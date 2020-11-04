@@ -16,10 +16,17 @@ import io.iohk.ethereum.network.p2p.messages.PV62.GetBlockHeaders.GetBlockHeader
 import io.iohk.ethereum.network.p2p.messages.PV62.{BlockHeaders, GetBlockHeaders}
 import io.iohk.ethereum.network.p2p.messages.Versions
 import io.iohk.ethereum.network.p2p.messages.WireProtocol.Hello.HelloEnc
-import io.iohk.ethereum.network.p2p.messages.WireProtocol.{Capability, Disconnect, Hello}
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.{
+  Capability,
+  Disconnect,
+  Ecip1097Capability,
+  Eth63Capability,
+  Hello
+}
 import io.iohk.ethereum.nodebuilder.SecureRandomBuilder
 import io.iohk.ethereum.utils._
 import java.util.concurrent.atomic.AtomicReference
+
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -41,6 +48,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
             HandshakeSuccess(
               PeerInfo(
                 initialStatus,
+                capabilities,
                 chainWeight,
                 forkAccepted,
                 currentMaxBlockNumber,
@@ -49,6 +57,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
             )
           ) =>
         initialStatus shouldBe remoteStatus
+        capabilities shouldBe remoteHello.capabilities
         chainWeight shouldBe remoteStatus.chainWeight
         bestBlockHash shouldBe remoteStatus.bestHash
         currentMaxBlockNumber shouldBe 0
@@ -57,54 +66,70 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
     }
   }
 
-  it should "send status with total difficulty only before ECIP-1097" in new TestSetup
+  it should "send status with total difficulty only when peer does not support ECIP-1097" in new TestSetup
     with LocalPeerSetup
     with RemotePeerSetup {
-
-    val bc = blockchainConfig
-    val handshaker = EtcHandshaker(new MockEtcHandshakerConfiguration {
-      override val blockchainConfig: BlockchainConfig =
-        bc.copy(ecip1097BlockNumber = firstBlock.number + 1)
-    })
 
     val newChainWeight = ChainWeight.zero.increase(genesisBlock.header).increase(firstBlock.header)
 
     blockchain.save(firstBlock, Nil, newChainWeight, saveAsBestBlock = true)
 
-    val newLocalStatus =
-      localStatus.copy(chainWeight = newChainWeight, bestHash = firstBlock.header.hash)
+    val remoteHelloWithoutEcip1097 =
+      remoteHello.copy(capabilities = Seq(Eth63Capability))
 
-    handshaker.nextMessage.map(_.messageToSend) shouldBe Right(localHello: HelloEnc)
-    val handshakerAfterHelloOpt = handshaker.applyMessage(remoteHello)
+    val newLocalStatus =
+      localStatus.copy(chainWeight = newChainWeight, bestHash = firstBlock.header.hash).as63
+
+    initHandshakerWithoutResolver.nextMessage.map(_.messageToSend) shouldBe Right(localHello: HelloEnc)
+    val handshakerAfterHelloOpt = initHandshakerWithoutResolver.applyMessage(remoteHelloWithoutEcip1097)
     assert(handshakerAfterHelloOpt.isDefined)
     handshakerAfterHelloOpt.get.nextMessage.map(_.messageToSend.underlyingMsg) shouldBe Right(newLocalStatus)
+
+    val handshakerAfterStatusOpt = handshakerAfterHelloOpt.get.applyMessage(remoteStatus.as63)
+    handshakerAfterStatusOpt shouldBe 'defined
+    handshakerAfterStatusOpt.get.nextMessage match {
+      case Left(HandshakeSuccess(peerInfo)) =>
+        peerInfo.capabilities should not contain Ecip1097Capability
+
+      case other =>
+        fail(s"Invalid handshaker state: $other")
+    }
   }
 
-  it should "send status with total difficulty and latest checkpoint number after ECIP-1097" in new TestSetup
+  it should "send status with total difficulty and latest checkpoint when peer supports ECIP-1097" in new TestSetup
     with LocalPeerSetup
     with RemotePeerSetup {
-
-    val bc = blockchainConfig
-    val handshaker = EtcHandshaker(new MockEtcHandshakerConfiguration {
-      override val blockchainConfig: BlockchainConfig =
-        bc.copy(ecip1097BlockNumber = firstBlock.number)
-    })
 
     val newChainWeight = ChainWeight.zero.increase(genesisBlock.header).increase(firstBlock.header)
 
     blockchain.save(firstBlock, Nil, newChainWeight, saveAsBestBlock = true)
-    blockchain.saveBestKnownBlocks(firstBlock.number, Some(42)) // doesn't matter what number this is
+
+    val remoteHelloWithCapabilites =
+      remoteHello.copy(capabilities = remoteHello.capabilities :+ Ecip1097Capability)
 
     val newLocalStatus =
-      localStatus.copy(
-        chainWeight = newChainWeight,
-        bestHash = firstBlock.header.hash
-      )
+      localStatus
+        .copy(
+          chainWeight = newChainWeight,
+          bestHash = firstBlock.header.hash
+        )
+        .as64
 
-    handshaker.nextMessage.map(_.messageToSend) shouldBe Right(localHello: HelloEnc)
-    val handshakerAfterHelloOpt = handshaker.applyMessage(remoteHello)
+    initHandshakerWithoutResolver.nextMessage.map(_.messageToSend) shouldBe Right(localHello: HelloEnc)
+
+    val handshakerAfterHelloOpt = initHandshakerWithoutResolver.applyMessage(remoteHelloWithCapabilites)
     assert(handshakerAfterHelloOpt.isDefined)
     handshakerAfterHelloOpt.get.nextMessage.map(_.messageToSend.underlyingMsg) shouldBe Right(newLocalStatus)
+
+    val handshakerAfterStatusOpt = handshakerAfterHelloOpt.get.applyMessage(remoteStatus.as64)
+    handshakerAfterStatusOpt shouldBe 'defined
+    handshakerAfterStatusOpt.get.nextMessage match {
+      case Left(HandshakeSuccess(peerInfo)) =>
+        peerInfo.capabilities should contain(Ecip1097Capability)
+
+      case other =>
+        fail(s"Invalid handshaker state: $other")
+    }
   }
 
   it should "correctly connect during an apropiate handshake if a fork resolver is used and the remote peer has the DAO block" in new TestSetup
@@ -125,6 +150,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
             HandshakeSuccess(
               PeerInfo(
                 initialStatus,
+                capabilities,
                 chainWeight,
                 forkAccepted,
                 currentMaxBlockNumber,
@@ -133,6 +159,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
             )
           ) =>
         initialStatus shouldBe remoteStatus
+        capabilities shouldBe remoteHello.capabilities
         chainWeight shouldBe remoteStatus.chainWeight
         bestBlockHash shouldBe remoteStatus.bestHash
         currentMaxBlockNumber shouldBe 0
@@ -159,6 +186,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
             HandshakeSuccess(
               PeerInfo(
                 initialStatus,
+                capabilities,
                 chainWeight,
                 forkAccepted,
                 currentMaxBlockNumber,
@@ -167,6 +195,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
             )
           ) =>
         initialStatus shouldBe remoteStatus
+        capabilities shouldBe remoteHello.capabilities
         chainWeight shouldBe remoteStatus.chainWeight
         bestBlockHash shouldBe remoteStatus.bestHash
         currentMaxBlockNumber shouldBe 0
@@ -299,7 +328,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
     val localHello = Hello(
       p2pVersion = EtcHelloExchangeState.P2pVersion,
       clientId = Config.clientId,
-      capabilities = Seq(Capability("eth", Versions.PV63.toByte)),
+      capabilities = Seq(Eth63Capability, Ecip1097Capability),
       listenPort = 0, //Local node not listening
       nodeId = ByteString(nodeStatus.nodeId)
     )
@@ -327,7 +356,7 @@ class EtcHandshakerSpec extends AnyFlatSpec with Matchers {
     val remoteHello = Hello(
       p2pVersion = EtcHelloExchangeState.P2pVersion,
       clientId = "remote-peer",
-      capabilities = Seq(Capability("eth", Versions.PV63.toByte)),
+      capabilities = Seq(Eth63Capability),
       listenPort = remotePort,
       nodeId = ByteString(remoteNodeStatus.nodeId)
     )

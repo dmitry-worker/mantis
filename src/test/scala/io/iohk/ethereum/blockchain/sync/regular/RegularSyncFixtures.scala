@@ -23,6 +23,7 @@ import io.iohk.ethereum.network.p2p.Message
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.{NewBlock, Status}
 import io.iohk.ethereum.network.p2p.messages.PV62._
 import io.iohk.ethereum.network.p2p.messages.PV63.{GetNodeData, NodeData}
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.Eth63Capability
 import io.iohk.ethereum.network.{Peer, PeerId}
 import io.iohk.ethereum.nodebuilder.SecureRandomBuilder
 import io.iohk.ethereum.utils.Config.SyncConfig
@@ -105,6 +106,7 @@ trait RegularSyncFixtures { self: Matchers with AsyncMockFactory =>
         Status(1, 1, ChainWeight.totalDifficultyOnly(1), ByteString(s"${peer.id}_bestHash"), ByteString("unused"))
       PeerInfo(
         status,
+        capabilities = Seq(Eth63Capability),
         forkAccepted = true,
         chainWeight = status.chainWeight,
         maxBlockNumber = 0,

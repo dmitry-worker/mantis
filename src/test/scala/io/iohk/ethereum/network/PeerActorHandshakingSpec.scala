@@ -18,7 +18,7 @@ import io.iohk.ethereum.network.handshaker._
 import io.iohk.ethereum.network.p2p.Message
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.Status
 import io.iohk.ethereum.network.p2p.messages.Versions
-import io.iohk.ethereum.network.p2p.messages.WireProtocol.{Disconnect, Hello, Pong}
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.{Disconnect, Eth63Capability, Hello, Pong}
 import io.iohk.ethereum.network.rlpx.RLPxConnectionHandler
 import io.iohk.ethereum.utils.Config
 import org.scalatest.flatspec.AnyFlatSpec
@@ -180,6 +180,7 @@ class PeerActorHandshakingSpec extends AnyFlatSpec with Matchers {
 
     val defaultPeerInfo = PeerInfo(
       defaultStatus,
+      Seq(Eth63Capability),
       defaultStatus.chainWeight,
       defaultForkAccepted,
       defaultBlockNumber,

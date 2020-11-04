@@ -5,7 +5,7 @@ import io.iohk.ethereum.domain.ChainWeight
 import io.iohk.ethereum.network.handshaker.EtcHelloExchangeState
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.Status
 import io.iohk.ethereum.network.p2p.messages.Versions
-import io.iohk.ethereum.network.p2p.messages.WireProtocol.{Capability, Hello}
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.{Eth63Capability, Hello}
 import io.iohk.ethereum.network.rlpx.{FrameCodec, MessageCodec}
 import io.iohk.ethereum.utils.Config
 import org.scalatest.flatspec.AnyFlatSpec
@@ -77,7 +77,7 @@ class MessageCodecSpec extends AnyFlatSpec with Matchers {
     val helloV5 = Hello(
       p2pVersion = EtcHelloExchangeState.P2pVersion,
       clientId = Config.clientId,
-      capabilities = Seq(Capability("eth", Versions.PV63.toByte)),
+      capabilities = Seq(Eth63Capability),
       listenPort = 0, //Local node not listening
       nodeId = ByteString(1)
     )

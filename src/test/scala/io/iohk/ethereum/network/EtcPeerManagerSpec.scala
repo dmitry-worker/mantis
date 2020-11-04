@@ -17,7 +17,7 @@ import io.iohk.ethereum.network.PeerEventBusActor.{PeerSelector, Subscribe}
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.{NewBlock, Status}
 import io.iohk.ethereum.network.p2p.messages.PV62._
 import io.iohk.ethereum.network.p2p.messages.Versions
-import io.iohk.ethereum.network.p2p.messages.WireProtocol.Disconnect
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.{Disconnect, Eth63Capability}
 import io.iohk.ethereum.utils.Config
 import org.bouncycastle.util.encoders.Hex
 import org.scalatest.flatspec.AnyFlatSpec
@@ -248,6 +248,7 @@ class EtcPeerManagerSpec extends AnyFlatSpec with Matchers {
 
     val initialPeerInfo = PeerInfo(
       remoteStatus = peerStatus,
+      capabilities = Seq(Eth63Capability),
       chainWeight = peerStatus.chainWeight,
       forkAccepted = false,
       maxBlockNumber = Fixtures.Blocks.Block3125369.header.number,

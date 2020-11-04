@@ -10,6 +10,7 @@ import io.iohk.ethereum.network.{EtcPeerManagerActor, Peer}
 import io.iohk.ethereum.network.EtcPeerManagerActor.PeerInfo
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.{NewBlock, Status}
 import io.iohk.ethereum.network.p2p.messages.PV62.NewBlockHashes
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.Eth63Capability
 import io.iohk.ethereum.network.p2p.messages.{PV62, Versions}
 import io.iohk.ethereum.utils.Config
 
@@ -150,6 +151,7 @@ class BlockBroadcastSpec extends AnyFlatSpec with Matchers {
     )
     val initialPeerInfo = PeerInfo(
       remoteStatus = peerStatus,
+      capabilities = Seq(Eth63Capability),
       chainWeight = peerStatus.chainWeight,
       forkAccepted = false,
       maxBlockNumber = Fixtures.Blocks.Block3125369.header.number,

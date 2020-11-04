@@ -8,6 +8,7 @@ import io.iohk.ethereum.domain.ChainWeight
 import io.iohk.ethereum.network.EtcPeerManagerActor.PeerInfo
 import io.iohk.ethereum.network.Peer
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.Status
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.Eth63Capability
 
 trait TestSyncPeers { self: TestSyncConfig =>
   implicit def system: ActorSystem
@@ -29,6 +30,7 @@ trait TestSyncPeers { self: TestSyncConfig =>
 
   val defaultPeer1Info = PeerInfo(
     peer1Status,
+    capabilities = Seq(Eth63Capability),
     forkAccepted = true,
     chainWeight = peer1Status.chainWeight,
     maxBlockNumber = bestBlock,
@@ -38,6 +40,7 @@ trait TestSyncPeers { self: TestSyncConfig =>
   val twoAcceptedPeers = Map(
     peer1 -> PeerInfo(
       peer1Status,
+      capabilities = Seq(Eth63Capability),
       forkAccepted = true,
       chainWeight = peer1Status.chainWeight,
       maxBlockNumber = bestBlock,
@@ -45,6 +48,7 @@ trait TestSyncPeers { self: TestSyncConfig =>
     ),
     peer2 -> PeerInfo(
       peer2Status,
+      capabilities = Seq(Eth63Capability),
       forkAccepted = true,
       chainWeight = peer1Status.chainWeight,
       maxBlockNumber = bestBlock,
@@ -55,6 +59,7 @@ trait TestSyncPeers { self: TestSyncConfig =>
   val singlePeer = Map(
     peer1 -> PeerInfo(
       peer1Status,
+      capabilities = Seq(Eth63Capability),
       forkAccepted = true,
       chainWeight = peer1Status.chainWeight,
       maxBlockNumber = bestBlock,

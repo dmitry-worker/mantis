@@ -35,7 +35,7 @@ class MessageSpec extends AnyFlatSpec with Matchers {
     p2pVersion = 4,
     /** TODO change the expected bytyes to reflect the name change from etc-cleint to mantis * */
     clientId = "etc-client",
-    capabilities = Seq(WireProtocol.Capability("eth", Versions.PV63.toByte)),
+    capabilities = Seq(WireProtocol.Eth63Capability),
     listenPort = 3333,
     nodeId = ByteString(
       Hex.decode(

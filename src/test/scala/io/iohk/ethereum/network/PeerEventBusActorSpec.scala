@@ -12,7 +12,7 @@ import io.iohk.ethereum.network.PeerEventBusActor.SubscriptionClassifier._
 import io.iohk.ethereum.network.EtcPeerManagerActor.PeerInfo
 import io.iohk.ethereum.network.p2p.messages.CommonMessages.Status
 import io.iohk.ethereum.network.p2p.messages.Versions
-import io.iohk.ethereum.network.p2p.messages.WireProtocol.{Ping, Pong}
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.{Eth63Capability, Ping, Pong}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -250,6 +250,7 @@ class PeerEventBusActorSpec extends AnyFlatSpec with Matchers {
     )
     val initialPeerInfo = PeerInfo(
       remoteStatus = peerStatus,
+      capabilities = Seq(Eth63Capability),
       chainWeight = peerStatus.chainWeight,
       forkAccepted = false,
       maxBlockNumber = Fixtures.Blocks.Block3125369.header.number,

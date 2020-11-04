@@ -18,6 +18,7 @@ import io.iohk.ethereum.utils.Config.SyncConfig
 import io.iohk.ethereum.{Fixtures, WithActorSystemShutDown}
 import java.net.InetSocketAddress
 
+import io.iohk.ethereum.network.p2p.messages.WireProtocol.Eth63Capability
 import org.scalatest.BeforeAndAfter
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
@@ -498,6 +499,7 @@ class PivotBlockSelectorSpec
     val allPeers = Map(
       peer1 -> PeerInfo(
         peer1Status,
+        capabilities = Seq(Eth63Capability),
         forkAccepted = true,
         chainWeight = peer1Status.chainWeight,
         maxBlockNumber = bestBlock,
@@ -505,6 +507,7 @@ class PivotBlockSelectorSpec
       ),
       peer2 -> PeerInfo(
         peer2Status,
+        capabilities = Seq(Eth63Capability),
         forkAccepted = true,
         chainWeight = peer1Status.chainWeight,
         maxBlockNumber = bestBlock,
@@ -512,6 +515,7 @@ class PivotBlockSelectorSpec
       ),
       peer3 -> PeerInfo(
         peer3Status,
+        capabilities = Seq(Eth63Capability),
         forkAccepted = true,
         chainWeight = peer1Status.chainWeight,
         maxBlockNumber = bestBlock,
@@ -519,6 +523,7 @@ class PivotBlockSelectorSpec
       ),
       peer4 -> PeerInfo(
         peer4Status,
+        capabilities = Seq(Eth63Capability),
         forkAccepted = true,
         chainWeight = peer1Status.chainWeight,
         maxBlockNumber = bestBlock,
@@ -529,6 +534,7 @@ class PivotBlockSelectorSpec
     val threeAcceptedPeers = Map(
       peer1 -> PeerInfo(
         peer1Status,
+        capabilities = Seq(Eth63Capability),
         forkAccepted = true,
         chainWeight = peer1Status.chainWeight,
         maxBlockNumber = bestBlock,
@@ -536,6 +542,7 @@ class PivotBlockSelectorSpec
       ),
       peer2 -> PeerInfo(
         peer2Status,
+        capabilities = Seq(Eth63Capability),
         forkAccepted = true,
         chainWeight = peer1Status.chainWeight,
         maxBlockNumber = bestBlock,
@@ -543,6 +550,7 @@ class PivotBlockSelectorSpec
       ),
       peer3 -> PeerInfo(
         peer3Status,
+        capabilities = Seq(Eth63Capability),
         forkAccepted = true,
         chainWeight = peer1Status.chainWeight,
         maxBlockNumber = bestBlock,
@@ -553,6 +561,7 @@ class PivotBlockSelectorSpec
     val singlePeer = Map(
       peer1 -> PeerInfo(
         peer1Status,
+        capabilities = Seq(Eth63Capability),
         forkAccepted = true,
         chainWeight = peer1Status.chainWeight,
         maxBlockNumber = bestBlock,
@@ -563,6 +572,7 @@ class PivotBlockSelectorSpec
     val peersFromDifferentNetworks = Map(
       peer1 -> PeerInfo(
         peer1Status,
+        capabilities = Seq(Eth63Capability),
         forkAccepted = true,
         chainWeight = peer1Status.chainWeight,
         maxBlockNumber = bestBlock,
@@ -570,6 +580,7 @@ class PivotBlockSelectorSpec
       ),
       peer2 -> PeerInfo(
         peer2Status,
+        capabilities = Seq(Eth63Capability),
         forkAccepted = false,
         chainWeight = peer1Status.chainWeight,
         maxBlockNumber = bestBlock,
@@ -577,6 +588,7 @@ class PivotBlockSelectorSpec
       ),
       peer3 -> PeerInfo(
         peer3Status,
+        capabilities = Seq(Eth63Capability),
         forkAccepted = true,
         chainWeight = peer1Status.chainWeight,
         maxBlockNumber = bestBlock,
@@ -584,6 +596,7 @@ class PivotBlockSelectorSpec
       ),
       peer4 -> PeerInfo(
         peer4Status,
+        capabilities = Seq(Eth63Capability),
         forkAccepted = true,
         chainWeight = peer1Status.chainWeight,
         maxBlockNumber = bestBlock,

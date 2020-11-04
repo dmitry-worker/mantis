@@ -281,15 +281,9 @@ class BlockImporter(
   }
 
   private def broadcastBlocks(blocks: List[Block], weights: List[ChainWeight]): Unit = {
-    val newBlocks = (blocks, weights).mapN(NewBlock(_, _)).map { nb =>
-      if (nb.block.number < blockchainConfig.ecip1097BlockNumber) nb.as63 else nb.as64
-    }
-
-    //TODO: use the target PeerInfo to determine code and encoding when sending the message: ETCM-280
-    broadcastNewBlocks(newBlocks)
+    val newBlocks = (blocks, weights).mapN(NewBlock(_, _))
+    broadcaster ! BroadcastBlocks(newBlocks)
   }
-
-  private def broadcastNewBlocks(blocks: List[NewBlock]): Unit = broadcaster ! BroadcastBlocks(blocks)
 
   private def updateTxPool(blocksAdded: Seq[Block], blocksRemoved: Seq[Block]): Unit = {
     blocksRemoved.foreach(block => pendingTransactionsManager ! AddUncheckedTransactions(block.body.transactionList))
